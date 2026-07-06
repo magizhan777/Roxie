@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roxie Embedded Studio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#00ff88;--g2:#00cc66;--g3:#00ff8820;--g4:#00ff8840;
+  --bg:#050f0a;--bg2:#091a10;--bg3:#0d2418;--bg4:#102e1e;
+  --border:#00ff8830;--border2:#00ff8860;
+  --text:#b0ffcc;--text2:#70cc99;--text3:#407755;
+  --warn:#ffaa00;--err:#ff4444;--info:#00aaff;
+  --font:'Share Tech Mono',monospace;--fontd:'Orbitron',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden}
+#studio{display:grid;grid-template-rows:48px 1fr 200px;grid-template-columns:200px 1fr 240px;height:100vh;gap:1px;background:#00ff8815}
+.panel{background:var(--bg);border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.ph{padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;font-family:var(--fontd);font-size:10px;font-weight:600;color:var(--g);letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
+.ph i{font-size:14px}
+.ph .dot{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 6px var(--g);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.ps{flex:1;overflow-y:auto;padding:8px}
+.ps::-webkit-scrollbar{width:3px}
+.ps::-webkit-scrollbar-track{background:transparent}
+.ps::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+#topbar{grid-column:1/-1;grid-row:1;background:var(--bg2);border-bottom:1px solid var(--border2);display:flex;align-items:center;padding:0 16px;gap:20px}
+.logo{font-family:var(--fontd);font-size:14px;font-weight:700;color:var(--g);letter-spacing:2px;text-shadow:0 0 20px var(--g)}
+.logo span{color:var(--text2);font-size:11px;margin-left:6px;font-weight:400;letter-spacing:1px}
+.topbtns{display:flex;gap:6px;margin-left:auto}
+.tbtn{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 12px;font-family:var(--font);font-size:11px;cursor:pointer;border-radius:3px;transition:all .2s}
+.tbtn:hover{background:var(--g3);color:var(--g);border-color:var(--g)}
+.tbtn.pri{background:var(--g3);border-color:var(--g);color:var(--g)}
+.tbtn.pri:hover{background:var(--g4)}
+.tbtn:disabled{opacity:.35;cursor:not-allowed}
+.status-bar{display:flex;align-items:center;gap:12px;margin-left:16px;font-size:11px;color:var(--text3)}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block}
+.sb-dot.warn{background:var(--warn)}
+
+#explorer{grid-row:2;grid-column:1}
+.tree-item{padding:5px 8px;cursor:pointer;border-radius:3px;display:flex;align-items:center;gap:6px;color:var(--text2);font-size:12px;transition:all .15s}
+.tree-item:hover{background:var(--g3);color:var(--g)}
+.tree-item.sel{background:var(--g4);color:var(--g);border-left:2px solid var(--g)}
+.tree-item i{font-size:13px;opacity:.7}
+.tree-section{font-size:10px;color:var(--text3);padding:8px 8px 4px;letter-spacing:1px;text-transform:uppercase}
+
+#boardview{grid-row:2;grid-column:2}
+#canvas3d{width:100%;flex:1;background:var(--bg2);position:relative;overflow:hidden}
+#board-svg{width:100%;height:100%}
+.board-label{font-family:'Share Tech Mono',monospace;font-size:8px;fill:#00ff88;opacity:.8}
+.pin-dot{cursor:pointer}
+.pin-tooltip{position:absolute;background:var(--bg3);border:1px solid var(--border2);padding:6px 10px;border-radius:4px;font-size:11px;color:var(--g);pointer-events:none;display:none;white-space:nowrap;z-index:10}
+.board-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0}
+.btab{padding:6px 16px;font-family:var(--font);font-size:11px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.btab.act{color:var(--g);border-bottom-color:var(--g)}
+.btab:hover{color:var(--text2)}
+.board-controls{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center}
+.bctl{background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:3px 10px;font-family:var(--font);font-size:11px;cursor:pointer;border-radius:2px}
+.bctl:hover{border-color:var(--g2);color:var(--g)}
+.bctl.sel{border-color:var(--g);color:var(--g);background:var(--g3)}
+select.bctl{padding:3px 6px}
+select.bctl option{background:var(--bg)}
+
+#complib{grid-row:2;grid-column:3}
+.comp-item{padding:6px 8px;border:1px solid var(--border);border-radius:4px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s;font-size:12px;color:var(--text2)}
+.comp-item:hover{background:var(--g3);border-color:var(--g2);color:var(--g)}
+.comp-item.added{background:var(--g4);border-color:var(--g);color:var(--g)}
+.comp-item i{font-size:14px;opacity:.8}
+.comp-badge{margin-left:auto;font-size:9px;padding:2px 5px;border-radius:2px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);white-space:nowrap}
+.comp-section{font-size:10px;color:var(--text3);padding:8px 0 4px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:6px}
+
+#bottom{grid-row:3;grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#00ff8815}
+
+.nl-input-area{padding:8px;display:flex;gap:6px;flex-shrink:0;border-top:1px solid var(--border)}
+.nl-input{flex:1;background:var(--bg2);border:1px solid var(--border2);color:var(--g);font-family:var(--font);font-size:12px;padding:6px 10px;border-radius:3px;outline:none;resize:none;height:52px}
+.nl-input::placeholder{color:var(--text3)}
+.nl-input:focus{border-color:var(--g);background:var(--bg3)}
+.send-btn{background:var(--g3);border:1px solid var(--g);color:var(--g);padding:0 14px;cursor:pointer;border-radius:3px;font-family:var(--fontd);font-size:10px;font-weight:600;transition:all .2s;white-space:nowrap}
+.send-btn:hover{background:var(--g4)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+.nl-msg{padding:5px 8px;margin-bottom:3px;border-radius:3px;font-size:12px;line-height:1.5}
+.nl-msg.user{color:var(--text2);border-left:2px solid var(--text3);background:var(--bg2)}
+.nl-msg.ai{color:var(--g);border-left:2px solid var(--g2)}
+.nl-msg.sys{color:var(--text3);font-size:11px;font-style:italic}
+
+.fw-step{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.fw-step:last-child{border:none}
+.fw-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px}
+.fw-icon.done{background:#00ff8830;color:var(--g);border:1px solid var(--g2)}
+.fw-icon.run{background:#ffaa0020;color:var(--warn);border:1px solid var(--warn);animation:pulse 1s infinite}
+.fw-icon.wait{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.fw-icon.err{background:#ff444420;color:var(--err);border:1px solid var(--err)}
+.fw-label{color:var(--text2)}
+.fw-label.done{color:var(--g)}
+.fw-label.run{color:var(--warn)}
+.fw-label.err{color:var(--err)}
+.fw-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.progress-bar{height:4px;background:var(--bg3);border-radius:2px;margin:8px 0;overflow:hidden}
+.progress-fill{height:100%;background:var(--g);border-radius:2px;transition:width 1s ease}
+
+.serial-line{font-size:11px;padding:2px 0;border-bottom:1px solid var(--border);color:var(--text2)}
+.serial-line.data{color:var(--g)}
+.serial-line.warn{color:var(--warn)}
+.serial-line.err{color:var(--err)}
+.serial-line.sys{color:var(--info)}
+.serial-time{color:var(--text3);margin-right:6px}
+.serial-input{display:flex;gap:6px;padding:6px 8px;border-top:1px solid var(--border);flex-shrink:0}
+.serial-cmd{flex:1;background:var(--bg2);border:1px solid var(--border2);color:var(--g);font-family:var(--font);font-size:11px;padding:4px 8px;border-radius:2px;outline:none}
+.serial-cmd:focus{border-color:var(--g)}
+.serial-send{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:4px 10px;cursor:pointer;font-family:var(--font);font-size:11px;border-radius:2px}
+.serial-send:hover{color:var(--g);border-color:var(--g)}
+.chip-label{font-family:'Share Tech Mono',monospace;font-size:8px;fill:#00ff88;opacity:.8}
+
+/* API Key Modal */
+#api-modal{position:fixed;inset:0;background:#000000cc;display:flex;align-items:center;justify-content:center;z-index:100}
+#api-box{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:24px;width:420px;max-width:90vw}
+#api-box h2{font-family:var(--fontd);font-size:13px;color:var(--g);margin-bottom:8px;letter-spacing:1px}
+#api-box p{font-size:11px;color:var(--text2);margin-bottom:16px;line-height:1.6}
+#api-key-inp{width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--g);font-family:var(--font);font-size:12px;padding:8px 10px;border-radius:3px;outline:none;margin-bottom:10px}
+#api-key-inp:focus{border-color:var(--g)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.modal-note{font-size:10px;color:var(--text3);margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div id="api-modal">
+  <div id="api-box">
+    <h2>ROXIE AI — API CONFIGURATION</h2>
+    <p>Enter your Anthropic API key to enable the Natural Language Command engine. Your key is stored only in this browser session and never sent anywhere except api.anthropic.com.</p>
+    <input id="api-key-inp" type="password" placeholder="sk-ant-api03-..." />
+    <div class="modal-btns">
+      <button class="tbtn" onclick="skipApiKey()">Use Local Ollama (No API Key)</button>
+      <button class="tbtn pri" onclick="saveApiKey()">Connect AI Engine</button>
+    </div>
+    <p class="modal-note">Get your API key from console.anthropic.com → API Keys. Or choose "Use Local Ollama" to send prompts to a local Ollama instance at http://localhost:11434 (no cloud key required). Without either, the NL panel runs in demo mode.</p>
+  </div>
+</div>
+
+<div id="studio">
+  <div id="topbar">
+    <div class="logo">ROXIE<span>EMBEDDED STUDIO</span></div>
+    <div class="status-bar">
+      <span class="sb-dot"></span><span id="board-status">ESP32 DevKit V1</span>
+      <span style="color:var(--border2)">|</span>
+      <span class="sb-dot warn"></span>No device connected
+      <span style="color:var(--border2)">|</span>
+      <span id="ai-status" style="font-size:10px;color:var(--text3)">AI: Demo Mode</span>
+    </div>
+    <div class="topbtns">
+      <button class="tbtn" id="btn-generate" onclick="runGenerate()" disabled>Generate Firmware</button>
+      <button class="tbtn" id="btn-compile" onclick="runCompile()" disabled>Compile</button>
+      <button class="tbtn pri" id="btn-upload" onclick="runUpload()" disabled>Upload</button>
+    </div>
+  </div>
+
+  <div class="panel" id="explorer">
+    <div class="ph"><i class="ti ti-folder-open" aria-hidden="true"></i>PROJECT EXPLORER</div>
+    <div class="ps">
+      <div class="tree-section">Workspace</div>
+      <div class="tree-item sel"><i class="ti ti-cpu" aria-hidden="true"></i>my_roxie_project</div>
+      <div class="tree-item" style="padding-left:20px"><i class="ti ti-file-code" aria-hidden="true"></i>main.ino</div>
+      <div class="tree-item" style="padding-left:20px"><i class="ti ti-file-code" aria-hidden="true"></i>config.h</div>
+      <div class="tree-item" style="padding-left:20px"><i class="ti ti-folder" aria-hidden="true"></i>lib/</div>
+      <div class="tree-section">Board</div>
+      <div class="tree-item sel"><i class="ti ti-circuit-board" aria-hidden="true"></i><span id="board-explorer">ESP32 DevKit V1</span></div>
+      <div class="tree-section">Components</div>
+      <div id="proj-comps"><div class="tree-item" style="color:var(--text3);font-size:11px;font-style:italic">No components added</div></div>
+      <div class="tree-section">Libraries</div>
+      <div id="proj-libs"><div class="tree-item" style="color:var(--text3);font-size:11px;font-style:italic">Auto-detected</div></div>
+      <div class="tree-section">Device</div>
+      <div class="tree-item"><i class="ti ti-usb" aria-hidden="true"></i>Scan Ports</div>
+      <div class="tree-item"><i class="ti ti-settings" aria-hidden="true"></i>921600 baud</div>
+    </div>
+  </div>
+
+  <div class="panel" id="boardview">
+    <div class="board-tabs">
+      <div class="btab act">3D Board View</div>
+      <div class="btab">Pin Map</div>
+      <div class="btab">Wiring Diagram</div>
+    </div>
+    <div class="board-controls">
+      <select class="bctl" id="board-sel" onchange="changeBoard()">
+        <option>ESP32 DevKit V1</option>
+        <option>Arduino Uno</option>
+        <option>Arduino Nano</option>
+      </select>
+      <button class="bctl" onclick="resetView()"><i class="ti ti-refresh" aria-hidden="true"></i> Reset</button>
+      <button class="bctl" id="btn-pinmode" onclick="togglePinMode()">Pin Select Mode</button>
+      <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="pin-hint">Hover pins to inspect • Click to assign</span>
+    </div>
+    <div id="canvas3d">
+      <svg id="board-svg" viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="pin-tooltip" id="pin-tooltip"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="complib">
+    <div class="ph"><i class="ti ti-puzzle" aria-hidden="true"></i>COMPONENT LIBRARY</div>
+    <div class="ps" id="comp-list"></div>
+  </div>
+
+  <div id="bottom">
+    <div class="panel">
+      <div class="ph"><div class="dot"></div>NATURAL LANGUAGE COMMAND</div>
+      <div class="ps" id="nl-log">
+        <div class="nl-msg sys">Roxie ready. Describe your project behavior...</div>
+        <div class="nl-msg ai">Roxie: Add components from the library, then describe what you want to build.</div>
+      </div>
+      <div class="nl-input-area">
+        <textarea class="nl-input" id="nl-input" placeholder='e.g. "If gas exceeds 300ppm, activate buzzer and show warning on OLED"'></textarea>
+        <button class="send-btn" id="nl-send" onclick="sendNL()">SEND</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><i class="ti ti-code" aria-hidden="true"></i>FIRMWARE STATUS</div>
+      <div class="ps">
+        <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+        <div id="fw-steps">
+          <div class="fw-step"><div class="fw-icon wait" id="fi0">1</div><div><div class="fw-label" id="fl0">Analyze intent</div><div class="fw-sub">Parse NL command</div></div></div>
+          <div class="fw-step"><div class="fw-icon wait" id="fi1">2</div><div><div class="fw-label" id="fl1">Assign GPIO pins</div><div class="fw-sub">Resolve conflicts</div></div></div>
+          <div class="fw-step"><div class="fw-icon wait" id="fi2">3</div><div><div class="fw-label" id="fl2">Select libraries</div><div class="fw-sub">Auto-detect dependencies</div></div></div>
+          <div class="fw-step"><div class="fw-icon wait" id="fi3">4</div><div><div class="fw-label" id="fl3">Generate firmware</div><div class="fw-sub">C/C++ code gen</div></div></div>
+          <div class="fw-step"><div class="fw-icon wait" id="fi4">5</div><div><div class="fw-label" id="fl4">Compile</div><div class="fw-sub">ESP-IDF / Arduino CLI</div></div></div>
+          <div class="fw-step"><div class="fw-icon wait" id="fi5">6</div><div><div class="fw-label" id="fl5">Upload</div><div class="fw-sub">Flash to device</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><i class="ti ti-terminal" aria-hidden="true"></i>SERIAL MONITOR <span style="margin-left:auto;font-size:9px;font-family:var(--font)">115200 baud</span></div>
+      <div class="ps" id="serial-log">
+        <div class="serial-line sys"><span class="serial-time">[--:--:--]</span>Waiting for device...</div>
+      </div>
+      <div class="serial-input">
+        <input class="serial-cmd" id="serial-cmd" placeholder="Send command..." onkeydown="if(event.key==='Enter')sendSerial()">
+        <button class="serial-send" onclick="sendSerial()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let APIKEY='';
+let demoMode=true;
+let useLocalOllama=false;
+
+function saveApiKey(){
+  const v=document.getElementById('api-key-inp').value.trim();
+  if(!v||!v.startsWith('sk-')){alert('Please enter a valid Anthropic API key (starts with sk-)');return;}
+  APIKEY=v;demoMode=false;useLocalOllama=false;
+  document.getElementById('api-modal').style.display='none';
+  document.getElementById('ai-status').textContent='AI: Connected';
+  document.getElementById('ai-status').style.color='var(--g)';
+}
+function skipApiKey(){
+  // If the user skips, prefer using a local Ollama instance (no cloud API key required)
+  demoMode=false;
+  useLocalOllama=true;
+  document.getElementById('api-modal').style.display='none';
+  document.getElementById('ai-status').textContent='AI: Local Ollama';
+  document.getElementById('ai-status').style.color='var(--g)';
+}
+
+const BOARDS={
+  'ESP32 DevKit V1':{color:'#1a3a2a',pins:[
+    {id:'3V3',x:620,y:30,cap:['PWR'],color:'#ff4444'},{id:'GND',x:620,y:50,cap:['GND'],color:'#555'},
+    {id:'D34',x:620,y:70,cap:['GPIO','ADC'],color:'#00cc66'},{id:'D35',x:620,y:90,cap:['GPIO','ADC'],color:'#00cc66'},
+    {id:'D32',x:620,y:110,cap:['GPIO','ADC','PWM'],color:'#00cc66'},{id:'D33',x:620,y:130,cap:['GPIO','ADC','PWM'],color:'#00cc66'},
+    {id:'D25',x:620,y:150,cap:['GPIO','DAC'],color:'#00cc66'},{id:'D26',x:620,y:170,cap:['GPIO','DAC'],color:'#00cc66'},
+    {id:'D27',x:620,y:190,cap:['GPIO','ADC','PWM'],color:'#00cc66'},{id:'D14',x:620,y:210,cap:['GPIO','ADC','PWM','SPI'],color:'#00cc66'},
+    {id:'D12',x:620,y:230,cap:['GPIO','ADC','SPI'],color:'#00cc66'},{id:'D13',x:620,y:250,cap:['GPIO','ADC','SPI'],color:'#00cc66'},
+    {id:'VIN',x:80,y:30,cap:['PWR'],color:'#ff4444'},{id:'GND2',x:80,y:50,cap:['GND'],color:'#555'},
+    {id:'D23',x:80,y:70,cap:['GPIO','SPI','PWM'],color:'#00cc66'},{id:'D22',x:80,y:90,cap:['GPIO','I2C'],color:'#5599ff'},
+    {id:'D1',x:80,y:110,cap:['GPIO','UART'],color:'#ffaa00'},{id:'D3',x:80,y:130,cap:['GPIO','UART'],color:'#ffaa00'},
+    {id:'D21',x:80,y:150,cap:['GPIO','I2C'],color:'#5599ff'},{id:'D19',x:80,y:170,cap:['GPIO','SPI'],color:'#00cc66'},
+    {id:'D18',x:80,y:190,cap:['GPIO','SPI'],color:'#00cc66'},{id:'D5',x:80,y:210,cap:['GPIO','SPI'],color:'#00cc66'},
+    {id:'D17',x:80,y:230,cap:['GPIO','UART'],color:'#ffaa00'},{id:'D16',x:80,y:250,cap:['GPIO','UART'],color:'#ffaa00'},
+  ]},
+  'Arduino Uno':{color:'#00285a',pins:[
+    {id:'5V',x:620,y:40,cap:['PWR'],color:'#ff4444'},{id:'GND',x:620,y:60,cap:['GND'],color:'#555'},
+    {id:'A0',x:620,y:90,cap:['ADC','GPIO'],color:'#aa44ff'},{id:'A1',x:620,y:110,cap:['ADC','GPIO'],color:'#aa44ff'},
+    {id:'A2',x:620,y:130,cap:['ADC','GPIO'],color:'#aa44ff'},{id:'A3',x:620,y:150,cap:['ADC','GPIO'],color:'#aa44ff'},
+    {id:'A4',x:620,y:170,cap:['ADC','I2C'],color:'#5599ff'},{id:'A5',x:620,y:190,cap:['ADC','I2C'],color:'#5599ff'},
+    {id:'D0',x:80,y:40,cap:['GPIO','UART'],color:'#ffaa00'},{id:'D1',x:80,y:60,cap:['GPIO','UART'],color:'#ffaa00'},
+    {id:'D2',x:80,y:80,cap:['GPIO','INT'],color:'#00cc66'},{id:'D3',x:80,y:100,cap:['GPIO','PWM'],color:'#00cc66'},
+    {id:'D4',x:80,y:120,cap:['GPIO'],color:'#00cc66'},{id:'D5',x:80,y:140,cap:['GPIO','PWM'],color:'#00cc66'},
+    {id:'D6',x:80,y:160,cap:['GPIO','PWM'],color:'#00cc66'},{id:'D7',x:80,y:180,cap:['GPIO'],color:'#00cc66'},
+    {id:'D8',x:80,y:200,cap:['GPIO'],color:'#00cc66'},{id:'D9',x:80,y:220,cap:['GPIO','PWM'],color:'#00cc66'},
+    {id:'D10',x:80,y:240,cap:['GPIO','PWM','SPI'],color:'#00cc66'},{id:'D11',x:80,y:260,cap:['GPIO','PWM','SPI'],color:'#00cc66'},
+    {id:'D12',x:80,y:280,cap:['GPIO','SPI'],color:'#00cc66'},{id:'D13',x:80,y:300,cap:['GPIO','SPI'],color:'#00cc66'},
+  ]},
+  'Arduino Nano':{color:'#003a00',pins:[
+    {id:'5V',x:620,y:40,cap:['PWR'],color:'#ff4444'},{id:'GND',x:620,y:60,cap:['GND'],color:'#555'},
+    {id:'A0',x:620,y:90,cap:['ADC','GPIO'],color:'#aa44ff'},{id:'A1',x:620,y:110,cap:['ADC','GPIO'],color:'#aa44ff'},
+    {id:'A2',x:620,y:130,cap:['ADC','GPIO'],color:'#aa44ff'},{id:'A3',x:620,y:150,cap:['ADC','GPIO'],color:'#aa44ff'},
+    {id:'A4',x:620,y:170,cap:['ADC','I2C'],color:'#5599ff'},{id:'A5',x:620,y:190,cap:['ADC','I2C'],color:'#5599ff'},
+    {id:'D2',x:80,y:70,cap:['GPIO','INT'],color:'#00cc66'},{id:'D3',x:80,y:90,cap:['GPIO','PWM'],color:'#00cc66'},
+    {id:'D4',x:80,y:110,cap:['GPIO'],color:'#00cc66'},{id:'D5',x:80,y:130,cap:['GPIO','PWM'],color:'#00cc66'},
+    {id:'D6',x:80,y:150,cap:['GPIO','PWM'],color:'#00cc66'},{id:'D7',x:80,y:170,cap:['GPIO'],color:'#00cc66'},
+    {id:'D8',x:80,y:190,cap:['GPIO'],color:'#00cc66'},{id:'D9',x:80,y:210,cap:['GPIO','PWM'],color:'#00cc66'},
+    {id:'D10',x:80,y:230,cap:['GPIO','SPI'],color:'#00cc66'},{id:'D11',x:80,y:250,cap:['GPIO','SPI'],color:'#00cc66'},
+  ]}
+};
+
+const COMPONENTS={
+  sensors:[
+    {id:'mq2',name:'MQ2 Gas Sensor',icon:'ti-flame',protocol:'ADC'},
+    {id:'mq135',name:'MQ135 Air Quality',icon:'ti-wind',protocol:'ADC'},
+    {id:'dht11',name:'DHT11 Temp/Humidity',icon:'ti-temperature',protocol:'1-Wire'},
+    {id:'dht22',name:'DHT22 Temp/Humidity',icon:'ti-temperature',protocol:'1-Wire'},
+    {id:'pir',name:'PIR Motion Sensor',icon:'ti-eye',protocol:'GPIO'},
+    {id:'ultra',name:'Ultrasonic HC-SR04',icon:'ti-radio',protocol:'GPIO'},
+    {id:'ldr',name:'LDR Light Sensor',icon:'ti-sun',protocol:'ADC'},
+    {id:'soil',name:'Soil Moisture',icon:'ti-plant',protocol:'ADC'},
+  ],
+  actuators:[
+    {id:'led',name:'LED',icon:'ti-bulb',protocol:'GPIO'},
+    {id:'rgbled',name:'RGB LED',icon:'ti-palette',protocol:'PWM'},
+    {id:'relay',name:'Relay Module',icon:'ti-switch',protocol:'GPIO'},
+    {id:'buzzer',name:'Buzzer',icon:'ti-volume',protocol:'GPIO'},
+    {id:'servo',name:'Servo Motor',icon:'ti-rotate',protocol:'PWM'},
+    {id:'oled',name:'OLED Display 0.96"',icon:'ti-device-desktop',protocol:'I2C'},
+    {id:'lcd',name:'LCD Display 16x2',icon:'ti-device-desktop',protocol:'I2C'},
+    {id:'dcmotor',name:'DC Motor + L298N',icon:'ti-engine',protocol:'PWM'},
+  ]
+};
+
+let addedComps=[];
+let pinMode=false;
+let selPins={};
+let fwRunning=false;
+let curBoard='ESP32 DevKit V1';
+
+function buildCompList(){
+  const el=document.getElementById('comp-list');
+  el.innerHTML='<div class="comp-section">Sensors</div>';
+  COMPONENTS.sensors.forEach(c=>{
+    el.innerHTML+=`<div class="comp-item" id="ci-${c.id}" onclick="toggleComp('${c.id}','sensor')"><i class="ti ${c.icon}" aria-hidden="true"></i>${c.name}<span class="comp-badge">${c.protocol}</span></div>`;
+  });
+  el.innerHTML+='<div class="comp-section" style="margin-top:8px">Actuators</div>';
+  COMPONENTS.actuators.forEach(c=>{
+    el.innerHTML+=`<div class="comp-item" id="ci-${c.id}" onclick="toggleComp('${c.id}','actuator')"><i class="ti ${c.icon}" aria-hidden="true"></i>${c.name}<span class="comp-badge">${c.protocol}</span></div>`;
+  });
+}
+
+function toggleComp(id,type){
+  const all=[...COMPONENTS.sensors,...COMPONENTS.actuators];
+  const comp=all.find(c=>c.id===id);
+  const idx=addedComps.findIndex(c=>c.id===id);
+  if(idx>=0){addedComps.splice(idx,1);document.getElementById('ci-'+id).classList.remove('added');}
+  else{addedComps.push({...comp,type});document.getElementById('ci-'+id).classList.add('added');}
+  updateProjPanel();
+  document.getElementById('btn-generate').disabled=addedComps.length===0;
+}
+
+function updateProjPanel(){
+  const pc=document.getElementById('proj-comps');
+  if(!addedComps.length){pc.innerHTML='<div class="tree-item" style="color:var(--text3);font-size:11px;font-style:italic">No components added</div>';return;}
+  pc.innerHTML=addedComps.map(c=>`<div class="tree-item" style="padding-left:20px"><i class="ti ${c.icon}" aria-hidden="true"></i>${c.name}</div>`).join('');
+}
+
+function changeBoard(){
+  curBoard=document.getElementById('board-sel').value;
+  document.getElementById('board-status').textContent=curBoard;
+  document.getElementById('board-explorer').textContent=curBoard;
+  addedComps=[];selPins={};
+  document.querySelectorAll('.comp-item').forEach(el=>el.classList.remove('added'));
+  updateProjPanel();
+  document.getElementById('btn-generate').disabled=true;
+  drawBoard();
+}
+
+function drawBoard(){
+  const bd=BOARDS[curBoard];
+  const svg=document.getElementById('board-svg');
+  const bw=520,bx=90,by=15,bh=310;
+  let html='';
+  html+=`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="${bd.color}" stroke="#00ff8840" stroke-width="1"/>`;
+  html+=`<rect x="${bx+10}" y="${by+10}" width="${bw-20}" height="${bh-20}" rx="6" fill="#ffffff08" stroke="#00ff8820" stroke-width=".5"/>`;
+  if(curBoard.includes('ESP32')){
+    html+=`<rect x="250" y="100" width="200" height="140" rx="4" fill="#1a1a1a" stroke="#00ff8860" stroke-width="1"/>`;
+    html+=`<text x="350" y="178" text-anchor="middle" class="chip-label" font-size="10">ESP32-WROOM-32</text>`;
+    html+=`<rect x="290" y="115" width="120" height="95" rx="2" fill="#111" stroke="#333" stroke-width=".5"/>`;
+    html+=`<text x="350" y="168" text-anchor="middle" class="chip-label" font-size="7" opacity=".4">ESPRESSIF</text>`;
+    html+=`<rect x="158" y="148" width="30" height="44" rx="2" fill="#888" stroke="#555" stroke-width=".5"/>`;
+    html+=`<text x="173" y="174" text-anchor="middle" class="chip-label" font-size="7">USB</text>`;
+    html+=`<text x="350" y="35" text-anchor="middle" font-family="Orbitron,sans-serif" font-size="9" fill="#00ff88" letter-spacing="2">ESP32 DEVKIT V1</text>`;
+  } else if(curBoard.includes('Uno')){
+    html+=`<rect x="250" y="130" width="160" height="80" rx="3" fill="#1a1a1a" stroke="#0055aa40" stroke-width="1"/>`;
+    html+=`<text x="330" y="175" text-anchor="middle" class="chip-label" font-size="8" fill="#5599ff">ATmega328P</text>`;
+    html+=`<rect x="158" y="155" width="28" height="38" rx="2" fill="#777" stroke="#555"/>`;
+    html+=`<text x="172" y="178" text-anchor="middle" class="chip-label" font-size="7">USB</text>`;
+    html+=`<text x="350" y="35" text-anchor="middle" font-family="Orbitron,sans-serif" font-size="9" fill="#00ff88" letter-spacing="2">ARDUINO UNO R3</text>`;
+  } else {
+    html+=`<rect x="290" y="140" width="120" height="60" rx="2" fill="#1a1a1a" stroke="#00ff8840" stroke-width="1"/>`;
+    html+=`<text x="350" y="175" text-anchor="middle" class="chip-label" font-size="8">ATmega328P</text>`;
+    html+=`<text x="350" y="35" text-anchor="middle" font-family="Orbitron,sans-serif" font-size="9" fill="#00ff88" letter-spacing="2">ARDUINO NANO</text>`;
+  }
+  bd.pins.forEach(p=>{
+    const side=p.x<350?'left':'right';
+    const lx=side==='left'?p.x+14:p.x-14;
+    const anchor=side==='left'?'start':'end';
+    const connx=side==='left'?bx:bx+bw;
+    html+=`<line x1="${p.x}" y1="${p.y}" x2="${connx}" y2="${p.y}" stroke="${p.color}" stroke-width=".5" opacity=".3"/>`;
+    html+=`<g class="pin-dot" onmouseenter="showTip(event,'${p.id}','${p.cap.join(', ')}')" onmouseleave="hideTip()" onclick="clickPin('${p.id}','${p.color}')">`;
+    html+=`<circle cx="${p.x}" cy="${p.y}" r="4" fill="${p.color}" opacity=".9" id="pin-c-${p.id}"/>`;
+    html+=`<text x="${lx}" y="${p.y+3}" text-anchor="${anchor}" class="chip-label">${p.id}</text>`;
+    html+='</g>';
+  });
+  svg.innerHTML=html;
+}
+
+function showTip(e,pid,caps){
+  const tip=document.getElementById('pin-tooltip');
+  tip.innerHTML=`<b style="color:var(--g)">${pid}</b><br>${caps}<br><span style="color:var(--text3);font-size:10px">Click to assign</span>`;
+  tip.style.display='block';
+  const rect=document.getElementById('canvas3d').getBoundingClientRect();
+  tip.style.left=(e.clientX-rect.left+12)+'px';
+  tip.style.top=(e.clientY-rect.top+12)+'px';
+}
+function hideTip(){document.getElementById('pin-tooltip').style.display='none';}
+function clickPin(pid,origColor){
+  const circ=document.getElementById('pin-c-'+pid);
+  if(!circ)return;
+  if(selPins[pid]){delete selPins[pid];circ.setAttribute('fill',origColor);}
+  else{selPins[pid]=true;circ.setAttribute('fill','#ffaa00');}
+}
+function togglePinMode(){
+  pinMode=!pinMode;
+  document.getElementById('btn-pinmode').classList.toggle('sel',pinMode);
+  document.getElementById('pin-hint').textContent=pinMode?'Pin mode ON — click pins to select':'Hover pins to inspect • Click to assign';
+}
+function resetView(){selPins={};drawBoard();}
+
+const DEMO_REPLIES=[
+  "Understood! I'll assign MQ2 Gas Sensor to pin D34 (ADC), Buzzer to D27 (GPIO), and OLED to D21/D22 (I2C). Libraries needed: MQ2_Sensor, Adafruit_SSD1306, Wire. Generating firmware now...",
+  "Got it! DHT22 will use D4 (1-Wire), LED to D2 (GPIO PWM). Libraries: DHT_sensor_library, Arduino. Pin D2 supports PWM for brightness control.",
+  "Confirmed! PIR Sensor on D23 (digital interrupt), Relay on D27 (GPIO), LCD on D21/D22 (I2C). Libraries: Wire, LiquidCrystal_I2C. Ready to generate."
+];
+let demoIdx=0;
+
+async function sendNL(){
+  const inp=document.getElementById('nl-input');
+  const txt=inp.value.trim();
+  if(!txt)return;
+  addNLMsg('user',txt);
+  inp.value='';
+  document.getElementById('nl-send').disabled=true;
+  addNLMsg('sys','Roxie analyzing...');
+  if(demoMode){
+    await sleep(1200);
+    const log=document.getElementById('nl-log');
+    log.lastChild.remove();
+    addNLMsg('ai',DEMO_REPLIES[demoIdx%DEMO_REPLIES.length]);
+    demoIdx++;
+    document.getElementById('btn-generate').disabled=false;
+  } else {
+    const board=document.getElementById('board-sel').value;
+    const comps=addedComps.map(c=>c.name).join(', ')||'none';
+    const prompt=`You are Roxie, an AI assistant for embedded systems inside Roxie Embedded Studio. Board: ${board}. Components: ${comps}. User: "${txt}". Reply concisely (2-3 sentences): confirm understanding, list specific GPIO pin IDs to assign, and list required libraries. Be technical and specific.`;
+    try{
+      if(useLocalOllama){
+        // Send to local Ollama instance. If your Ollama server uses a different model name, change `model` accordingly.
+        const resp=await fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama3',prompt,temperature:0.2,max_tokens:300})});
+        // Ollama streams NDJSON lines with `response` fragments. Read as text and extract them.
+        let text='';
+        try{
+          const raw=await resp.text();
+          // raw may be NDJSON with many lines; parse each JSON line and concat `response` fields
+          raw.split(/\r?\n/).forEach(l=>{ if(!l.trim()) return; try{ const o=JSON.parse(l); if(o.response) text+=o.response; }catch(e){} });
+        }catch(err){
+          text='[No reply from local Ollama]';
+        }
+        document.getElementById('nl-log').lastChild.remove();
+        addNLMsg('ai',text||'[No reply from local Ollama]');
+        document.getElementById('btn-generate').disabled=false;
+      } else {
+        const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':APIKEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+        const data=await resp.json();
+        document.getElementById('nl-log').lastChild.remove();
+        addNLMsg('ai',data.content[0].text);
+        document.getElementById('btn-generate').disabled=false;
+      }
+    } catch(e){
+      document.getElementById('nl-log').lastChild.remove();
+      addNLMsg('ai','[Connection error — check API key, local Ollama, or network]');
+      // fallback to demo mode if nothing else works
+      demoMode=true;
+    }
+  }
+  document.getElementById('nl-send').disabled=false;
+}
+
+function addNLMsg(type,text){
+  const log=document.getElementById('nl-log');
+  const div=document.createElement('div');
+  div.className='nl-msg '+type;
+  div.textContent=(type==='ai'?'Roxie: ':type==='user'?'You: ':'')+text;
+  log.appendChild(div);
+  log.scrollTop=log.scrollHeight;
+}
+
+async function runGenerate(){
+  if(fwRunning)return;fwRunning=true;
+  const pct=[15,35,55,75,85,100];
+  for(let i=0;i<4;i++){
+    setStep(i,'run');document.getElementById('prog').style.width=pct[i]+'%';
+    await sleep(900+Math.random()*500);
+    setStep(i,'done');
+  }
+  document.getElementById('btn-compile').disabled=false;
+  addSerial('sys','Firmware generated successfully');
+  const comps=addedComps.map(c=>c.name).join(', ');
+  addSerial('data',`[ROXIE] Components: ${comps||'none'}`);
+  addSerial('data','[ROXIE] Libraries auto-selected. Ready to compile.');
+  fwRunning=false;
+}
+
+async function runCompile(){
+  if(fwRunning)return;fwRunning=true;
+  setStep(4,'run');document.getElementById('prog').style.width='85%';
+  addSerial('sys','Compiling firmware...');
+  await sleep(1800);
+  setStep(4,'done');document.getElementById('prog').style.width='92%';
+  addSerial('data','Sketch uses 248,752 bytes (18%) of program storage.');
+  addSerial('data','Global variables use 14,576 bytes (4%) of dynamic memory.');
+  addSerial('sys','Compilation successful.');
+  document.getElementById('btn-upload').disabled=false;
+  fwRunning=false;
+}
+
+async function runUpload(){
+  if(fwRunning)return;fwRunning=true;
+  setStep(5,'run');document.getElementById('prog').style.width='96%';
+  const msgs=['Connecting to device on COM3...','Chip is ESP32-D0WDQ6 (revision 1)','Writing at 0x00010000... (25%)','Writing at 0x00018000... (50%)','Writing at 0x00020000... (75%)','Writing at 0x00028000... (100%)'];
+  for(const m of msgs){addSerial('data',m);await sleep(600);}
+  setStep(5,'done');document.getElementById('prog').style.width='100%';
+  addSerial('sys','Upload complete. Board reset.');
+  await sleep(800);
+  addSerial('data','[ROXIE] System online');
+  addSerial('data','[ROXIE] All peripherals initialized');
+  fwRunning=false;
+}
+
+function setStep(i,state){
+  const ic=document.getElementById('fi'+i);
+  const lb=document.getElementById('fl'+i);
+  ic.className='fw-icon '+state;
+  lb.className='fw-label '+state;
+  if(state==='done')ic.innerHTML='<i class="ti ti-check" aria-hidden="true"></i>';
+  else ic.textContent=i+1;
+}
+
+function addSerial(type,text){
+  const log=document.getElementById('serial-log');
+  const d=new Date();
+  const t=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  const div=document.createElement('div');
+  div.className='serial-line '+type;
+  div.innerHTML=`<span class="serial-time">[${t}]</span>${text}`;
+  log.appendChild(div);log.scrollTop=log.scrollHeight;
+}
+
+function sendSerial(){
+  const inp=document.getElementById('serial-cmd');
+  const v=inp.value.trim();if(!v)return;
+  addSerial('warn','> '+v);inp.value='';
+  setTimeout(()=>addSerial('data','[ACK] '+v),300);
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+buildCompList();
+drawBoard();
+</script>
+</body>
+</html>

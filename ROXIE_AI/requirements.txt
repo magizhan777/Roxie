@@ -1,0 +1,15 @@
+# Roxie - Iron Edition
+# Python dependencies
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+pywin32>=306
+PyAudio>=0.2.14
+wikipedia>=1.4.0
+opencv-python>=4.8.0
+pyautogui>=0.9.54
+psutil>=5.9.0
+pywhatkit>=5.4.0
+screen-brightness-control>=0.22.0
+pycaw>=20230322
+comtypes>=1.2.0
+pygame>=2.5.0

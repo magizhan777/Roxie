@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROXIE — HUD Interface</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --g:        #00ff41;
+    --g-dim:    #00aa2a;
+    --g-dark:   #004d12;
+    --g-glow:   rgba(0, 255, 65, 0.3);
+    --g-faint:  rgba(0, 255, 65, 0.07);
+    --red:      #ff2222;
+    --gold:     #ffe055;
+    --bg:       #000000;
+    --panel:    rgba(0, 12, 4, 0.92);
+    --border:   rgba(0, 255, 65, 0.2);
+    --text:     #00cc33;
+    --white:    #ccffcc;
+    --font-hud: 'Orbitron', monospace;
+    --font-mono:'Share Tech Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── SCANLINES ───────────────────────────────── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.08) 3px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── GRID ────────────────────────────────────── */
+  .hud {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    grid-template-rows: 56px 1fr 190px;
+    height: 100vh;
+    gap: 3px;
+    padding: 6px;
+    background: #000;
+  }
+
+  /* ── HEADER ──────────────────────────────────── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-bottom: 2px solid var(--g-dim);
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--g), transparent);
+    box-shadow: 0 0 12px var(--g-glow);
+  }
+
+  .logo {
+    font-family: var(--font-hud);
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--g);
+    letter-spacing: 0.5em;
+    text-shadow: 0 0 20px var(--g-glow), 0 0 50px rgba(0,255,65,0.15);
+  }
+
+  .header-center {
+    text-align: center;
+    font-family: var(--font-hud);
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--g-dim);
+    line-height: 1.8;
+  }
+
+  .header-center .sub {
+    color: var(--g);
+    font-size: 0.55rem;
+  }
+
+  .header-time {
+    font-family: var(--font-hud);
+    font-size: 1.1rem;
+    color: var(--g);
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 12px var(--g-glow);
+  }
+
+  /* ── PANEL ───────────────────────────────────── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    padding: 14px 16px;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--g-dim), transparent);
+  }
+
+  /* corner brackets */
+  .panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(var(--g), var(--g)) top left / 14px 2px no-repeat,
+      linear-gradient(var(--g), var(--g)) top left / 2px 14px no-repeat,
+      linear-gradient(var(--g), var(--g)) top right / 14px 2px no-repeat,
+      linear-gradient(var(--g), var(--g)) top right / 2px 14px no-repeat,
+      linear-gradient(var(--g), var(--g)) bottom left / 14px 2px no-repeat,
+      linear-gradient(var(--g), var(--g)) bottom left / 2px 14px no-repeat,
+      linear-gradient(var(--g), var(--g)) bottom right / 14px 2px no-repeat,
+      linear-gradient(var(--g), var(--g)) bottom right / 2px 14px no-repeat;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .panel-title {
+    font-family: var(--font-hud);
+    font-size: 0.5rem;
+    letter-spacing: 0.4em;
+    color: var(--g-dim);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::before {
+    content: '▼';
+    color: var(--g);
+    font-size: 0.4rem;
+  }
+
+  /* ── LEFT — METRICS ──────────────────────────── */
+  .panel-left { grid-row: 2; }
+
+  .meter-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+  }
+
+  .meter-label { color: var(--text); }
+  .meter-val   { color: var(--g); font-family: var(--font-hud); font-size: 0.65rem; }
+
+  .bar-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(0,255,65,0.08);
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: var(--g);
+    box-shadow: 0 0 8px var(--g-glow);
+    transition: width 0.9s ease;
+    position: relative;
+  }
+
+  .bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -80%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    animation: bar-shine 2.5s infinite;
+  }
+
+  @keyframes bar-shine { to { left: 180%; } }
+
+  /* status dots */
+  .status-list { margin-top: 8px; }
+
+  .status-item {
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: dot-pulse 2s infinite;
+  }
+
+  .dot-g    { background: var(--g);   box-shadow: 0 0 6px var(--g); }
+  .dot-red  { background: var(--red); box-shadow: 0 0 6px var(--red); animation-delay: 0.5s; }
+  .dot-gold { background: var(--gold);box-shadow: 0 0 6px var(--gold); animation-delay: 1s; }
+
+  @keyframes dot-pulse {
+    0%,100% { opacity:1; }
+    50%      { opacity:0.25; }
+  }
+
+  /* ── CENTER ──────────────────────────────────── */
+  .panel-center {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    gap: 8px;
+  }
+
+  .neural-title {
+    font-family: var(--font-hud);
+    font-size: 0.5rem;
+    letter-spacing: 0.4em;
+    color: var(--g-dim);
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .neural-title::before { content: '▼'; color: var(--g); font-size: 0.4rem; }
+
+  /* ── REACTOR ─────────────────────────────────── */
+  .reactor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .reactor {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+
+  .reactor svg {
+    position: absolute;
+    width: 100%; height: 100%;
+    transform-origin: center;
+  }
+
+  .r-ring1 { animation: spin 10s linear infinite; }
+  .r-ring2 { animation: spin 6s linear infinite reverse; }
+  .r-ring3 { animation: spin 3.5s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .reactor-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #003310 0%, #001a08 60%, #000 100%);
+    border: 1px solid var(--g-dim);
+    box-shadow: 0 0 25px var(--g-glow), 0 0 55px rgba(0,255,65,0.12), inset 0 0 20px rgba(0,255,65,0.05);
+    animation: core-pulse 2.2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @keyframes core-pulse {
+    0%,100% { box-shadow: 0 0 25px var(--g-glow), 0 0 55px rgba(0,255,65,0.12); }
+    50%      { box-shadow: 0 0 45px var(--g-glow), 0 0 90px rgba(0,255,65,0.2), 0 0 130px rgba(0,255,65,0.06); }
+  }
+
+  .reactor-label {
+    font-family: var(--font-hud);
+    font-size: 0.48rem;
+    letter-spacing: 0.35em;
+    color: var(--g-dim);
+    text-align: center;
+  }
+
+  /* ── VOICE BARS ──────────────────────────────── */
+  .voice-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .vbars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 44px;
+  }
+
+  .vbar {
+    width: 4px;
+    border-radius: 1px;
+    background: var(--g);
+    box-shadow: 0 0 5px var(--g-glow);
+    animation: vb-idle 1.8s ease-in-out infinite;
+  }
+
+  .vbar:nth-child(1)  { height:6px;  animation-delay:0s; }
+  .vbar:nth-child(2)  { height:12px; animation-delay:0.1s; }
+  .vbar:nth-child(3)  { height:20px; animation-delay:0.2s; }
+  .vbar:nth-child(4)  { height:30px; animation-delay:0.12s; }
+  .vbar:nth-child(5)  { height:40px; animation-delay:0.05s; }
+  .vbar:nth-child(6)  { height:44px; animation-delay:0.18s; }
+  .vbar:nth-child(7)  { height:38px; animation-delay:0.08s; }
+  .vbar:nth-child(8)  { height:28px; animation-delay:0.22s; }
+  .vbar:nth-child(9)  { height:18px; animation-delay:0.15s; }
+  .vbar:nth-child(10) { height:10px; animation-delay:0.28s; }
+  .vbar:nth-child(11) { height:6px;  animation-delay:0.35s; }
+
+  @keyframes vb-idle {
+    0%,100% { transform:scaleY(0.25); opacity:0.35; }
+    50%      { transform:scaleY(1);   opacity:1; }
+  }
+
+  .vbar.active { animation: vb-active 0.25s ease-in-out infinite alternate; }
+  @keyframes vb-active { from { transform:scaleY(0.1); } to { transform:scaleY(1); } }
+
+  .listen-badge {
+    font-family: var(--font-hud);
+    font-size: 0.5rem;
+    letter-spacing: 0.3em;
+    color: var(--g);
+    padding: 5px 18px;
+    border: 1px solid var(--g-dim);
+    border-radius: 20px;
+    background: var(--g-faint);
+    box-shadow: 0 0 10px rgba(0,255,65,0.08);
+  }
+
+  /* ── RIGHT — LOG ─────────────────────────────── */
+  .panel-right { grid-row: 2; }
+
+  .log-stream {
+    height: calc(100% - 36px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--g-dark) transparent;
+  }
+
+  .log-entry {
+    font-size: 0.58rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+    animation: slide-in 0.3s ease;
+  }
+
+  @keyframes slide-in { from { opacity:0; transform:translateX(8px); } }
+
+  .log-ts  { color: var(--g-dim); font-size: 0.52rem; margin-bottom: 2px; }
+  .log-you { color: var(--gold); }
+  .log-ai  { color: var(--white); }
+
+  /* ── BOTTOM ──────────────────────────────────── */
+  .panel-bottom {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--g-dim);
+    padding: 12px 20px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+  }
+
+  .panel-bottom::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--g), transparent);
+    box-shadow: 0 0 10px var(--g-glow);
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .prompt-label {
+    font-family: var(--font-hud);
+    font-size: 0.58rem;
+    color: var(--g);
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+    text-shadow: 0 0 8px var(--g-glow);
+  }
+
+  #cmdInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--g-dark);
+    color: var(--g);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    padding: 3px 0;
+    outline: none;
+    letter-spacing: 0.05em;
+    caret-color: var(--g);
+  }
+
+  #cmdInput::placeholder { color: rgba(0,255,65,0.2); }
+  #cmdInput:focus { border-bottom-color: var(--g-dim); }
+
+  .btn {
+    font-family: var(--font-hud);
+    font-size: 0.52rem;
+    letter-spacing: 0.2em;
+    padding: 8px 22px;
+    border: 1px solid var(--g-dim);
+    background: var(--g-faint);
+    color: var(--g);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .btn:hover {
+    background: rgba(0,255,65,0.12);
+    border-color: var(--g);
+    box-shadow: 0 0 14px var(--g-glow);
+    color: #fff;
+  }
+
+  .response-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-height: 34px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .res-prefix {
+    font-family: var(--font-hud);
+    font-size: 0.52rem;
+    color: var(--g);
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+    padding-top: 3px;
+    text-shadow: 0 0 8px var(--g-glow);
+  }
+
+  #responseText { color: var(--white); flex: 1; }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 7px; height: 13px;
+    background: var(--g);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* typing dots */
+  .typing { display:none; align-items:center; gap:4px; padding-top:6px; }
+  .typing.on { display:flex; }
+  .typing span {
+    width:5px; height:5px; border-radius:50%;
+    background: var(--g);
+    animation: tdot 1.1s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay:0.18s; }
+  .typing span:nth-child(3) { animation-delay:0.36s; }
+  @keyframes tdot {
+    0%,80%,100% { transform:translateY(0); opacity:0.4; }
+    40%          { transform:translateY(-5px); opacity:1; }
+  }
+
+  /* quick cmds */
+  .quick-cmds {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .qcmd {
+    font-family: var(--font-hud);
+    font-size: 0.47rem;
+    letter-spacing: 0.12em;
+    padding: 4px 12px;
+    border: 1px solid rgba(0,255,65,0.18);
+    color: var(--g-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+  }
+
+  .qcmd:hover {
+    border-color: var(--g);
+    color: var(--g);
+    background: var(--g-faint);
+    box-shadow: 0 0 8px rgba(0,255,65,0.15);
+  }
+
+  /* coordinates */
+  .coords {
+    position: fixed;
+    bottom: 196px;
+    left: 14px;
+    font-size: 0.48rem;
+    color: rgba(0,255,65,0.22);
+    letter-spacing: 0.12em;
+    pointer-events: none;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--g-dark); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">R O X I E</div>
+    <div class="header-center">
+      JUST A REALLY VERY INTELLIGENT SYSTEM<br>
+      <span class="sub">● ROXIE AI ONLINE &nbsp;—&nbsp; IRON EDITION</span>
+    </div>
+    <div class="header-time" id="clock">00:00:00:00</div>
+  </header>
+
+  <!-- LEFT — SYSTEM METRICS -->
+  <div class="panel panel-left">
+    <div class="panel-title">SYSTEM METRICS</div>
+
+    <div class="meter-row">
+      <span class="meter-label">CPU LOAD</span>
+      <span class="meter-val" id="cpuVal">—</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="cpuBar" style="width:0"></div></div>
+
+    <div class="meter-row">
+      <span class="meter-label">MEMORY</span>
+      <span class="meter-val" id="ramVal">—</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="ramBar" style="width:0"></div></div>
+
+    <div class="meter-row">
+      <span class="meter-label">BATTERY</span>
+      <span class="meter-val" id="battVal">—</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="battBar" style="width:0"></div></div>
+
+    <div class="meter-row">
+      <span class="meter-label">AI LATENCY</span>
+      <span class="meter-val" id="latVal">—</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="latBar" style="width:0"></div></div>
+
+    <div class="status-list">
+      <div class="status-item"><span class="dot dot-g"></span>AI NEURAL LINK</div>
+      <div class="status-item"><span class="dot dot-g"></span>SPEECH RECOGNITION</div>
+      <div class="status-item"><span class="dot dot-g"></span>NATURAL SYNTHESIZER</div>
+      <div class="status-item"><span class="dot dot-gold"></span>MEMORY CORE</div>
+      <div class="status-item"><span class="dot dot-g"></span>SYSTEM CONTROL</div>
+      <div class="status-item"><span class="dot dot-red"></span>VISION MODULE</div>
+    </div>
+  </div>
+
+  <!-- CENTER — NEURAL CORE -->
+  <div class="panel panel-center">
+    <div class="neural-title">NEURAL CORE — ROXIE AI</div>
+
+    <div class="reactor-wrap">
+      <div class="reactor">
+
+        <!-- ring 1 — outer dashed -->
+        <svg class="r-ring1" viewBox="0 0 220 220">
+          <circle cx="110" cy="110" r="104" fill="none" stroke="#004d12" stroke-width="1" stroke-dasharray="3 9"/>
+          <circle cx="110" cy="110" r="104" fill="none" stroke="#00ff41" stroke-width="1"
+            stroke-dasharray="22 280" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+
+        <!-- ring 2 — mid -->
+        <svg class="r-ring2" viewBox="0 0 220 220">
+          <circle cx="110" cy="110" r="88" fill="none" stroke="#004d12" stroke-width="1" stroke-dasharray="1 5"/>
+          <circle cx="110" cy="110" r="88" fill="none" stroke="#00ff41" stroke-width="1.5"
+            stroke-dasharray="40 230" stroke-linecap="round" opacity="0.8"/>
+          <!-- tick marks -->
+          <g stroke="#00aa2a" stroke-width="0.8" opacity="0.6">
+            <line x1="110" y1="22" x2="110" y2="30"/>
+            <line x1="110" y1="190" x2="110" y2="198"/>
+            <line x1="22" y1="110" x2="30" y2="110"/>
+            <line x1="190" y1="110" x2="198" y2="110"/>
+          </g>
+        </svg>
+
+        <!-- ring 3 — inner with star -->
+        <svg class="r-ring3" viewBox="0 0 220 220">
+          <circle cx="110" cy="110" r="68" fill="none" stroke="#00aa2a" stroke-width="1" stroke-dasharray="6 10"/>
+          <!-- 5-point star -->
+          <polygon
+            points="110,52 121,86 157,86 129,107 140,141 110,120 80,141 91,107 63,86 99,86"
+            fill="none" stroke="#00ff41" stroke-width="1.2" opacity="0.55"/>
+        </svg>
+
+        <!-- core -->
+        <div class="reactor-core">
+          <!-- solid star inside -->
+          <svg width="44" height="44" viewBox="0 0 44 44">
+            <polygon
+              points="22,6 26,17 38,17 29,24 32,36 22,29 12,36 15,24 6,17 18,17"
+              fill="rgba(0,255,65,0.22)" stroke="#00ff41" stroke-width="1.2"/>
+          </svg>
+        </div>
+
+      </div>
+
+      <div class="reactor-label">ARC REACTOR &nbsp;—&nbsp; MARK VI</div>
+    </div>
+
+    <div class="voice-wrap">
+      <div class="vbars" id="vbars">
+        <div class="vbar"></div><div class="vbar"></div><div class="vbar"></div>
+        <div class="vbar"></div><div class="vbar"></div><div class="vbar"></div>
+        <div class="vbar"></div><div class="vbar"></div><div class="vbar"></div>
+        <div class="vbar"></div><div class="vbar"></div>
+      </div>
+      <div class="listen-badge" id="listenBadge">LISTENING &nbsp;—&nbsp; WAKE WORD: ROXIE</div>
+    </div>
+  </div>
+
+  <!-- RIGHT — INTERACTION LOG -->
+  <div class="panel panel-right">
+    <div class="panel-title">INTERACTION LOG</div>
+    <div class="log-stream" id="logStream">
+      <div class="log-entry">
+        <div class="log-ts">SYSTEM BOOT</div>
+        <div class="log-ai">Roxie online. All systems nominal.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM — INPUT -->
+  <div class="panel-bottom">
+    <div class="input-row">
+      <span class="prompt-label">ROXIE &gt;</span>
+      <input id="cmdInput" type="text" placeholder="Type a command or question..." autocomplete="off"/>
+      <button class="btn" onclick="sendCommand()">EXECUTE</button>
+      <button class="btn" id="voiceBtn" onclick="toggleVoice()">⬤ VOICE</button>
+    </div>
+
+    <div class="response-row">
+      <span class="res-prefix">ROXIE &gt;</span>
+      <div class="typing" id="typing"><span></span><span></span><span></span></div>
+      <span id="responseText"><span class="cursor-blink"></span></span>
+    </div>
+
+    <div class="quick-cmds">
+      <span class="qcmd" onclick="q('What time is it?')">TASK</span>
+      <span class="qcmd" onclick="q('System status report')">SYSTEM STATUS</span>
+      <span class="qcmd" onclick="q('Run diagnostics')">DIAGNOSTICS</span>
+      <span class="qcmd" onclick="q('Check network status')">*NETWORK</span>
+      <span class="qcmd" onclick="q('Give me an interesting insight')">↑ INSIGHTS</span>
+      <span class="qcmd" onclick="q('What is the weather today?')">*WEATHER</span>
+      <span class="qcmd" onclick="q('Search for files')">FILES 1.0</span>
+      <span class="qcmd" onclick="clearLog()">CLEAR LOG</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="coords">LAT: 11.8627°N &nbsp;|&nbsp; LON: 80.2708°E &nbsp;|&nbsp; ALT: 89</div>
+
+<script>
+// ── CLOCK ──────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  const ms = String(n.getMilliseconds()).padStart(3,'0').slice(0,2);
+  document.getElementById('clock').textContent =
+    n.toTimeString().slice(0,8) + ':' + ms;
+}
+setInterval(tick, 50); tick();
+
+// ── METRICS ────────────────────────────────────────
+const m = { cpu:38, ram:54, batt:84, lat:242 };
+
+function updateMetrics() {
+  m.cpu  = clamp(m.cpu  + rnd(12),  5,  98);
+  m.ram  = clamp(m.ram  + rnd(4),  30,  92);
+  m.lat  = clamp(m.lat  + rnd(60), 80, 600);
+  if (m.batt > 15) m.batt -= 0.008;
+
+  set('cpuVal',  m.cpu.toFixed(0)  + '%');
+  set('ramVal',  m.ram.toFixed(0)  + '%');
+  set('battVal', m.batt.toFixed(0) + '%');
+  set('latVal',  m.lat.toFixed(0)  + 'ms');
+
+  w('cpuBar',  m.cpu);
+  w('ramBar',  m.ram);
+  w('battBar', m.batt);
+  w('latBar',  Math.min(100, m.lat / 6));
+
+  // colour cpu bar red when high
+  const c = document.getElementById('cpuBar');
+  c.style.background = m.cpu > 80 ? '#ff2222' : m.cpu > 60 ? '#ffe055' : '#00ff41';
+  c.style.boxShadow  = m.cpu > 80 ? '0 0 8px rgba(255,34,34,0.6)'
+                     : m.cpu > 60 ? '0 0 8px rgba(255,224,85,0.5)'
+                     :              '0 0 8px rgba(0,255,65,0.4)';
+}
+
+function set(id, v) { document.getElementById(id).textContent = v; }
+function w(id, pct) { document.getElementById(id).style.width = pct + '%'; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function rnd(s) { return (Math.random() - 0.5) * s; }
+
+setInterval(updateMetrics, 900);
+updateMetrics();
+
+// ── OLLAMA ─────────────────────────────────────────
+const OLLAMA = 'http://localhost:11434/api/generate';
+const MODEL  = 'llama3';
+const SYS = `You are Roxie, a highly intelligent AI assistant, like a personal JARVIS.
+Be professional, sharp, and slightly witty. Address the user as "Sir".
+Keep responses concise — 2 sentences max unless detail is asked for.
+No markdown. No bullet points. Speak in clean natural sentences.
+Current time: ${new Date().toLocaleString()}.`;
+
+let history = [];
+
+async function callAI(msg) {
+  history.push(`User: ${msg}`);
+  if (history.length > 20) history = history.slice(-20);
+  const prompt = SYS + '\n\nConversation so far:\n' + history.join('\n') + '\nRoxie:';
+  const t0 = performance.now();
+  const res = await fetch(OLLAMA, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: MODEL, prompt, stream: false, options: { num_predict: 250 } })
+  });
+  m.lat = performance.now() - t0;
+  const data = await res.json();
+  const reply = (data.response || '').trim();
+  history.push(`Roxie: ${reply}`);
+  return reply || "I'm having trouble reaching the AI core, Sir.";
+}
+
+// ── TYPE EFFECT ────────────────────────────────────
+function typeOut(text) {
+  const el = document.getElementById('responseText');
+  el.textContent = '';
+  const cur = document.createElement('span');
+  cur.className = 'cursor-blink';
+  el.appendChild(cur);
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < text.length) el.insertBefore(document.createTextNode(text[i++]), cur);
+    else clearInterval(iv);
+  }, 16);
+}
+
+// ── LOG ────────────────────────────────────────────
+function addLog(user, ai) {
+  const s = document.getElementById('logStream');
+  const ts = new Date().toTimeString().slice(0,8);
+  const d = document.createElement('div');
+  d.className = 'log-entry';
+  d.innerHTML = `<div class="log-ts">${ts}</div>
+<div class="log-you">SIR: ${user}</div>
+<div class="log-ai">ROXIE: ${ai.slice(0,80)}${ai.length>80?'…':''}</div>`;
+  s.appendChild(d);
+  s.scrollTop = s.scrollHeight;
+}
+
+// ── SEND ───────────────────────────────────────────
+async function sendCommand() {
+  const inp = document.getElementById('cmdInput');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  inp.value = '';
+
+  setBusy(true);
+  try {
+    const reply = await callAI(cmd);
+    setBusy(false);
+    typeOut(reply);
+    addLog(cmd, reply);
+    sayIt(reply);
+  } catch (e) {
+    setBusy(false);
+    typeOut('Ollama connection failed, Sir. Make sure it is running.');
+  }
+}
+
+function setBusy(on) {
+  document.getElementById('typing').classList.toggle('on', on);
+  if (on) document.getElementById('responseText').textContent = '';
+  document.getElementById('listenBadge').textContent = on ? 'PROCESSING…' : 'LISTENING — WAKE WORD: ROXIE';
+  document.querySelectorAll('.vbar').forEach(b => b.classList.toggle('active', on));
+}
+
+// ── SPEAK ──────────────────────────────────────────
+function sayIt(text) {
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.0; u.pitch = 0.8;
+  const vs = speechSynthesis.getVoices();
+  const v = vs.find(x => /Daniel|David|Male|UK/i.test(x.name));
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+// ── VOICE INPUT ────────────────────────────────────
+let recog = null, recActive = false;
+
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    typeOut('Voice input requires Chrome, Sir.'); return;
+  }
+  if (recActive) { recog?.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recog = new SR();
+  recog.continuous = false; recog.interimResults = true; recog.lang = 'en-US';
+  recog.onstart = () => {
+    recActive = true;
+    document.getElementById('voiceBtn').textContent = '■ STOP';
+    document.getElementById('listenBadge').textContent = '● RECORDING…';
+    document.querySelectorAll('.vbar').forEach(b => b.classList.add('active'));
+  };
+  recog.onresult = e => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('cmdInput').value = t;
+    if (e.results[e.results.length-1].isFinal) sendCommand();
+  };
+  recog.onend = () => {
+    recActive = false;
+    document.getElementById('voiceBtn').textContent = '⬤ VOICE';
+    document.getElementById('listenBadge').textContent = 'LISTENING — WAKE WORD: ROXIE';
+    document.querySelectorAll('.vbar').forEach(b => b.classList.remove('active'));
+  };
+  recog.start();
+}
+
+// ── HELPERS ────────────────────────────────────────
+function q(text) { document.getElementById('cmdInput').value = text; document.getElementById('cmdInput').focus(); }
+function clearLog() {
+  document.getElementById('logStream').innerHTML =
+    '<div class="log-entry"><div class="log-ts">CLEARED</div><div class="log-ai">Log stream reset.</div></div>';
+  history = [];
+  typeOut('Log cleared. Fresh session initialised, Sir.');
+}
+
+document.getElementById('cmdInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendCommand(); });
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
+
+// ── BOOT ───────────────────────────────────────────
+setTimeout(() => {
+  typeOut('All systems online, Sir. Roxie at your service. How may I assist you today?');
+  setTimeout(() => sayIt('All systems online, Sir. Roxie at your service.'), 400);
+}, 1000);
+</script>
+<div id="roxieControlPanel" style="position:fixed;right:14px;bottom:14px;z-index:9999;width:min(360px,calc(100vw - 28px));background:rgba(3,14,22,.92);border:1px solid #00d4ff;color:#dff8ff;font-family:Consolas,monospace;padding:12px;box-shadow:0 0 18px rgba(0,212,255,.35)">
+  <div style="font-weight:700;margin-bottom:8px;color:#00d4ff">ROXIE CONTROLS</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+    <button onclick="roxieCmd('health check')">Health</button>
+    <button onclick="roxieCmd('analyze screen')">Screen OCR</button>
+    <button onclick="roxieCmd('list notes')">Notes</button>
+    <button onclick="roxieCmd('list alarms')">Alarms</button>
+    <button onclick="roxieCmd('detect faces')">Faces</button>
+    <button onclick="roxieCmd('list files')">Files</button>
+    <button onclick="roxieCmd('open virtual keyboard')">Keyboard</button>
+    <button onclick="roxieCmd('hand keyboard')">Hand Keys</button>
+    <button onclick="roxieCmd('volume up')">Vol +</button>
+    <button onclick="roxieCmd('volume down')">Vol -</button>
+  </div>
+  <input id="roxiePanelCmd" placeholder="Send command to Roxie backend" style="width:100%;box-sizing:border-box;margin-bottom:6px;background:#00131f;color:#fff;border:1px solid #157b99;padding:7px">
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <button onclick="roxiePanelSend()" style="flex:1">Send</button>
+    <button onclick="roxieLoadLogs()" style="flex:1">Logs</button>
+    <button onclick="roxieLoadSettings()" style="flex:1">Settings</button>
+  </div>
+  <pre id="roxiePanelOut" style="white-space:pre-wrap;max-height:180px;overflow:auto;margin:0;background:#000b12;padding:8px;border:1px solid #123946"></pre>
+</div>
+<script>
+async function roxieCmd(command) {
+  const out = document.getElementById('roxiePanelOut');
+  out.textContent = 'Running: ' + command;
+  try {
+    const res = await fetch('/api/command', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({command})
+    });
+    const data = await res.json();
+    out.textContent = data.reply || 'Command complete.';
+  } catch (e) {
+    out.textContent = 'Backend not available. Start with: python roxie.py';
+  }
+}
+function roxiePanelSend() {
+  const input = document.getElementById('roxiePanelCmd');
+  if (input.value.trim()) roxieCmd(input.value.trim());
+}
+async function roxieLoadLogs() {
+  const out = document.getElementById('roxiePanelOut');
+  try {
+    const res = await fetch('/api/logs');
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    out.textContent = 'Could not load logs.';
+  }
+}
+async function roxieLoadSettings() {
+  const out = document.getElementById('roxiePanelOut');
+  try {
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    out.textContent = 'Could not load settings.';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Runtime files
+ROXIE_AI/roxie_log.json
+ROXIE_AI/roxie_notes.json
+ROXIE_AI/roxie_alarms.json
+
+# Screenshots
+ROXIE_AI/roxie_screen_*.png
+
+# AI Models
+*.weights
+
+# VS Code
+.vscode/
